@@ -1,33 +1,26 @@
+require 'omniauth-oauth'
 require 'multi_json'
-require 'oauth'
-require 'omniauth'
+require 'net/http'
 
 module OmniAuth
   module Strategies
     class JIRA < OmniAuth::Strategies::OAuth
-      option :name, "jira"
 
-      # This is where you pass the options you would pass when
-      # initializing your consumer from the OAuth gem.
+      option :name, "JIRA"
       option :client_options, {
-        :private_key_file => 'rsa.pem',
+        :signature_method => 'RSA-SHA1',
         :request_token_path => '/plugins/servlet/oauth/request-token', 
         :authorize_path => "/plugins/servlet/oauth/authorize",
         :access_token_path => '/plugins/servlet/oauth/access-token',
-        :site => "http://localhost:2990/jira"
+        :site => nil
       }
 
-      # These are called after authentication has succeeded. If
-      # possible, you should try to set the UID without making
-      # additional calls (if the user id is returned with the token
-      # or as a URI parameter). This may not be possible with all
-      # providers.
-      uid{ request.params['user_id'] }
+      uid{ raw_info['name'] }
 
       info do
         {
           :name => raw_info['name'],
-          :location => raw_info['city']
+          :self => raw_info['self']
         }
       end
 
@@ -37,11 +30,21 @@ module OmniAuth
         }
       end
 
+      def consumer
+        consumer = ::OAuth::Consumer.new(options.consumer_key, options.consumer_secret, options.client_options)
+        consumer.http.open_timeout = options.open_timeout if options.open_timeout
+        consumer.http.read_timeout = options.read_timeout if options.read_timeout
+        consumer.http.set_debug_output($stderr)
+        consumer
+      end
+
       def raw_info
-        @raw_info ||= MultiJson.decode(access_token.get('/rest/auth/2/session')).body
+        @raw_info ||= MultiJson.decode(access_token.get('/rest/auth/1/session').body)
+      rescue ::Errno::ETIMEDOUT
+        raise ::Timeout::Error
       end
     end
   end
 end
 
-OmniAuth.config.add_camelization 'oauth', 'OAuth'
+OmniAuth.config.add_camelization 'jira', 'JIRA'
