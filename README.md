@@ -3,6 +3,11 @@ omniauth-jira
 
 A simple [OmniAuth](https://github.com/intridea/omniauth) strategy for Atlassian JIRA.
 
+Install
+-------
+
+    gem 'omniauth-jira'
+
 Usage
 -----
 
