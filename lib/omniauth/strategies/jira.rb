@@ -6,7 +6,7 @@ module OmniAuth
   module Strategies
     class JIRA < OmniAuth::Strategies::OAuth
 
-      option :name, "JIRA"
+      option :name, 'jira'
       option :client_options, {
         :signature_method => 'RSA-SHA1',
         :request_token_path => '/plugins/servlet/oauth/request-token', 
