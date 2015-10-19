@@ -37,6 +37,15 @@ module OmniAuth
         }
       end
 
+      credentials do
+        if access_token.params.has_key?(:oauth_expires_in)
+          {
+            "expires"    => true,
+            "expires_at" => (Time.now + (access_token.params[:oauth_expires_in].to_i / 1000)).to_i
+          }
+        end
+      end
+
       def raw_info
         @raw_info ||= {session_info: session_info, user_info: user_info}
       end
