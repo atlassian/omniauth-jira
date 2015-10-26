@@ -6,21 +6,28 @@ module OmniAuth
   module Strategies
     class JIRA < OmniAuth::Strategies::OAuth
 
-      option :name, "JIRA"
+      option :name, 'jira'
       option :client_options, {
-        :signature_method => 'RSA-SHA1',
+        :signature_method   => 'RSA-SHA1',
         :request_token_path => '/plugins/servlet/oauth/request-token', 
-        :authorize_path => "/plugins/servlet/oauth/authorize",
-        :access_token_path => '/plugins/servlet/oauth/access-token',
-        :site => nil
+        :authorize_path     => '/plugins/servlet/oauth/authorize',
+        :access_token_path  => '/plugins/servlet/oauth/access-token',
+        :site               => nil
       }
 
-      uid{ raw_info['name'] }
+      uid{ user_info['key'] }
 
       info do
         {
-          :name => raw_info['name'],
-          :self => raw_info['self']
+          nickname:  user_info['name'],
+          email:     user_info['emailAddress'],
+          name:      user_info['displayName'],
+          time_zone: user_info['timeZone'],
+          locale:    user_info['locale'],
+          image:     user_info['avatarUrls'] && user_info['avatarUrls']['48x48'],
+          urls: {
+            self: session_info['self']
+          }
         }
       end
 
@@ -30,8 +37,27 @@ module OmniAuth
         }
       end
 
+      credentials do
+        if access_token.params.has_key?(:oauth_expires_in)
+          {
+            "expires"    => true,
+            "expires_at" => (Time.now + (access_token.params[:oauth_expires_in].to_i / 1000)).to_i
+          }
+        end
+      end
+
       def raw_info
-        @raw_info ||= MultiJson.decode(access_token.get('/rest/auth/1/session').body)
+        @raw_info ||= {session_info: session_info, user_info: user_info}
+      end
+
+      def session_info
+        @session_info ||= MultiJson.decode(access_token.get('/rest/auth/1/session').body)
+      rescue ::Errno::ETIMEDOUT
+        raise ::Timeout::Error
+      end
+
+      def user_info
+        @user_info ||= MultiJson.decode(access_token.get(session_info['self']).body)
       rescue ::Errno::ETIMEDOUT
         raise ::Timeout::Error
       end
