@@ -46,11 +46,13 @@ module OmniAuth
         }
         
         if access_token.params.has_key?(:oauth_expires_in)
-          oauth_credentials.merge({
+          oauth_credentials.merge!({
             'expires'     => true,
             'expires_at'  => (Time.now + (access_token.params[:oauth_expires_in].to_i / 1000)).to_i
           })
         end
+        
+        oauth_credentials
       end
 
       def raw_info
