@@ -9,7 +9,7 @@ module OmniAuth
       option :name, 'jira'
       option :client_options, {
         :signature_method   => 'RSA-SHA1',
-        :request_token_path => '/plugins/servlet/oauth/request-token', 
+        :request_token_path => '/plugins/servlet/oauth/request-token',
         :authorize_path     => '/plugins/servlet/oauth/authorize',
         :access_token_path  => '/plugins/servlet/oauth/access-token',
         :site               => nil
@@ -38,12 +38,21 @@ module OmniAuth
       end
 
       credentials do
+        return nil unless access_token.params.has_key?(:oauth_token)
+
+        oauth_credentials = {
+          'token'   => access_token.params[:oauth_token],
+          'secret'  => access_token.params[:oauth_token_secret]
+        }
+        
         if access_token.params.has_key?(:oauth_expires_in)
-          {
-            "expires"    => true,
-            "expires_at" => (Time.now + (access_token.params[:oauth_expires_in].to_i / 1000)).to_i
-          }
+          oauth_credentials.merge!({
+            'expires'     => true,
+            'expires_at'  => (Time.now + (access_token.params[:oauth_expires_in].to_i / 1000)).to_i
+          })
         end
+        
+        oauth_credentials
       end
 
       def raw_info
